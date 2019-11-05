@@ -60,8 +60,13 @@ public extension CGPoint {
     init(_ const: CGFloat) {
         self.init(x: const, y: const)
     }
+    
+    var scalar: CGFloat {
+        return (pow(self.x, 2.0) + pow(self.y, 2.0)).squareRoot()
+    }
+    
     func length(from: CGPoint) -> CGFloat {
-        return (pow(self.x - from.x, 2.0) + pow(self.y - from.y, 2.0)).squareRoot()
+        return (self - from).scalar
     }
 
     func radian(from: CGPoint) -> CGFloat {
@@ -70,22 +75,18 @@ public extension CGPoint {
     
     func innerProduct(_ v: NSPoint) -> (value: CGFloat, theta: CGFloat) {
         let value: CGFloat = self.x * v.x + self.y * v.y
-        let A: CGFloat = (pow(self.x, 2.0) + pow(self.y, 2.0)).squareRoot()
-        let B: CGFloat = (pow(v.x, 2.0) + pow(v.y, 2.0)).squareRoot()
-        return (value, acos(value / (A * B)))
+        return (value, acos(value / (self.scalar * v.scalar)))
     }
     
     func outerProduct(_ v: NSPoint) -> (value: CGFloat, theta: CGFloat) {
         let value: CGFloat = self.x * v.y - self.y * v.x
-        let A: CGFloat = (pow(self.x, 2.0) + pow(self.y, 2.0)).squareRoot()
-        let B: CGFloat = (pow(v.x, 2.0) + pow(v.y, 2.0)).squareRoot()
-        return (value, asin(value / (A * B)))
+        return (value, asin(value / (self.scalar * v.scalar)))
     }
     
     func exteriorAngle(_ v: NSPoint) -> CGFloat {
         let op: CGFloat = self.x * v.y - self.y * v.x
-        let ip = self.innerProduct(v)
-        return op > 0 ? ip.theta : -ip.theta
+        let theta = self.innerProduct(v).theta
+        return op > 0 ? theta : -theta
     }
     
 }

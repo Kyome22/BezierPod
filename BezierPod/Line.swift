@@ -65,7 +65,7 @@ public class Line: Bezier {
     
     func offset(_ d: CGFloat) -> Line {
         let diff: NSPoint = p2 - p1
-        let len: CGFloat = (pow(diff.x, 2.0) + pow(diff.y, 2.0)).squareRoot()
+        let len: CGFloat = diff.scalar
         if len == 0.0 { return self }
         let normal: NSPoint = d * NSPoint(x: diff.y / len, y: -diff.x / len)
         return Line(p1: p1 + normal, p2: p2 + normal)
@@ -202,7 +202,7 @@ public class Line: Bezier {
         }
         let Q = NSPoint(x: q.x - (1.0 - t) * p1.x - t * p2.x,
                         y: q.y - (1.0 - t) * p1.y - t * p2.y)
-        return ((pow(Q.x, 2.0) + pow(Q.y, 2.0)).squareRoot(), t)
+        return (Q.scalar, t)
     }
     
     func distance(between line: Line) -> CGFloat {

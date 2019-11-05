@@ -161,10 +161,10 @@ class BezierView: NSView {
     
     func drawOffset(_ path: NSBezierPath, _ distance: CGFloat, _ color: NSColor) {
         let offsetPath = path.offset(distance)
-        color.setStroke()
+//        color.setStroke()
         for (n, bezier) in offsetPath.enumerated() {
-//            bezier.lineWidth = 0.5
-            // NSColor(hue: CGFloat(n) / CGFloat(offsetPath.count)).set()
+            bezier.lineWidth = 0.5
+            NSColor(hue: CGFloat(n) / CGFloat(offsetPath.count)).set()
             bezier.stroke()
         }
     }

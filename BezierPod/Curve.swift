@@ -9,7 +9,6 @@
 import Cocoa
 
 typealias Extrema = (x: [CGFloat], y: [CGFloat], values: [CGFloat])
-typealias Offset = (c: NSPoint, n: NSPoint, v: NSPoint)
 typealias CurvePair = (left: Curve, right: Curve)
 
 public class Curve: Bezier {
@@ -66,14 +65,14 @@ public class Curve: Bezier {
         for i in (0 ..< valuesT.count) {
             t = z * valuesT[i] + z
             let d: NSPoint = derivative(t)
-            sum += valuesC[i] * (d.x * d.x + d.y * d.y).squareRoot()
+            sum += valuesC[i] * d.scalar
         }
         return z * sum
     }
     
     private func normal(_ t: CGFloat) -> NSPoint {
         let d: NSPoint = derivative(t)
-        let q: CGFloat = (pow(d.x, 2.0) + pow(d.y, 2.0)).squareRoot()
+        let q: CGFloat = d.scalar
         return NSPoint(x: d.y / q, y: -d.x / q)
     }
     
@@ -199,23 +198,6 @@ public class Curve: Bezier {
         return secondPass
     }
     
-    private func scale(_ d: CGFloat) -> Curve? {
-        let v: [Offset] = [offset(0.0, 10.0), offset(1.0, 10.0)]
-        guard let o = lli(p1: v[0].v, p2: v[0].c, p3: v[1].v, p4: v[1].c) else {
-            return nil
-        }
-        var np = points
-        np[0] += (d * v[0].n)
-        np[3] += (d * v[1].n)
-        for i in [0, 1] {
-            let p: NSPoint = np[3 * i]
-            let d: NSPoint = derivative(CGFloat(i))
-            let p2: NSPoint = p + d
-            np[i + 1] = lli(p1: p, p2: p2, p3: o, p4: points[i + 1])!
-        }
-        return Curve(points: np)
-    }
-    
     private var isLinear: Bool {
         for a in align(points, Line(p1: points.first!, p2: points.last!)) {
             if abs(a.y) > 0.0001 {
@@ -223,12 +205,6 @@ public class Curve: Bezier {
             }
         }
         return true
-    }
-    
-    private func offset(_ t: CGFloat, _ d: CGFloat) -> Offset {
-        let c: NSPoint = compute(t)
-        let n: NSPoint = normal(t)
-        return Offset(c, n, (c + d * n))
     }
     
     func offset(_ d: CGFloat) -> [Curve] {
@@ -239,7 +215,26 @@ public class Curve: Bezier {
             }
             return [Curve(points: coords)]
         }
-        let reduced = reduce.compactMap { (b) -> Curve? in b.scale(d) }
+        
+        let reduced = reduce.map { (curve) -> Curve in
+            let line1: NSPoint = curve.c1 - curve.p1
+            let bridge: NSPoint = curve.c2 - curve.c1
+            let line2: NSPoint = curve.p2 - curve.c2
+            
+            let phi1: CGFloat = line1.exteriorAngle(bridge) / 2.0
+            let phi2: CGFloat = line2.exteriorAngle(bridge) / 2.0
+
+            let n1 = d * NSPoint(x: line1.y, y: -line1.x) / line1.scalar
+            let n2 = d * NSPoint(x: line2.y, y: -line2.x) / line2.scalar
+            
+            let nc1 = NSPoint(x: n1.x * cos(phi1) - n1.y * sin(phi1),
+                               y: n1.x * sin(phi1) + n1.y * cos(phi1)) / cos(phi1)
+            let nc2 = NSPoint(x: n2.x * cos(phi2) - n2.y * sin(phi2),
+                               y: n2.x * sin(phi2) + n2.y * cos(phi2)) / cos(phi2)
+            
+            return Curve(points: [curve.p1 + n1, curve.c1 + nc1, curve.c2 + nc2, curve.p2 + n2])
+        }
+        
         if reduced.count < 2 { return reduced }
         for n in (1 ..< reduced.count) {
             reduced[n].points[0] = reduced[n - 1].p2
