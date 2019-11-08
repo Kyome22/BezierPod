@@ -8,7 +8,7 @@
 
 import Cocoa
 
-typealias Extrema = (x: [CGFloat], y: [CGFloat], values: [CGFloat])
+typealias Extreme = (x: [CGFloat], y: [CGFloat], values: [CGFloat])
 typealias CurvePair = (left: Curve, right: Curve)
 
 public class Curve: Bezier {
@@ -35,6 +35,11 @@ public class Curve: Bezier {
         return path
     }
     
+    public var boundsPath: NSBezierPath {
+        let path = NSBezierPath(rect: bounds)
+        return path
+    }
+    
     override public var description: String {
         return "from: \(p1), ctrl1: \(c1), ctrl2: \(c2), to: \(p2), t1: \(t1), t2: \(t2)"
     }
@@ -43,7 +48,16 @@ public class Curve: Bezier {
         return (p1 + c1 + c2 + p2) / 4.0
     }
     
+    override var bounds: NSRect {
+        return path.bounds
+    }
+    
     // ★★★ Unique Method ★★★
+    func set(_ t1: CGFloat, _ t2: CGFloat) {
+        self.t1 = t1
+        self.t2 = t2
+    }
+    
     override public func compute(_ t: CGFloat) -> NSPoint {
         var point = pow(1.0 - t, 3.0) * p1
         point += (3.0 * pow(1.0 - t, 2.0) * t) * c1
@@ -114,28 +128,26 @@ public class Curve: Bezier {
         return split(t1).right.split(map(t2, t1, 1.0, 0.0, 1.0)).left
     }
     
-    private var extrema: Extrema {
+    private var extreme: Extreme {
         let dpts: [[NSPoint]] = derive(points)
-        var xElms: [CGFloat] = dpts[0].map({ (p) -> CGFloat in p.x })
-        var yElms: [CGFloat] = dpts[0].map({ (p) -> CGFloat in p.y })
-        var xRoots: [CGFloat] = droots(xElms)
-        var yRoots: [CGFloat] = droots(yElms)
-        xElms = dpts[1].map({ (p) -> CGFloat in p.x })
-        yElms = dpts[1].map({ (p) -> CGFloat in p.y })
-        xRoots.append(contentsOf: droots(xElms))
-        yRoots.append(contentsOf: droots(yElms))
-        xRoots = xRoots.filter({ (v) -> Bool in (0 ... 1).contains(v) }).sorted()
-        yRoots = yRoots.filter({ (v) -> Bool in (0 ... 1).contains(v) }).sorted()
+        var xRoots = [CGFloat]()
+        var yRoots = [CGFloat]()
+        for n in [0, 1] {
+            xRoots.append(contentsOf: droots(dpts[n].map({ (p) -> CGFloat in p.x })))
+            yRoots.append(contentsOf: droots(dpts[n].map({ (p) -> CGFloat in p.y })))
+        }
+        xRoots = xRoots.filter({ (v) -> Bool in (0.0 ... 1.0).contains(v) }).sorted()
+        yRoots = yRoots.filter({ (v) -> Bool in (0.0 ... 1.0).contains(v) }).sorted()
         let roots: [CGFloat] = (xRoots + yRoots).reduce([CGFloat](), { (res, v) -> [CGFloat] in
             return res.contains(v) ? res : res + [v]
         }).sorted()
-        return Extrema(xRoots, yRoots, roots)
+        return Extreme(xRoots, yRoots, roots)
     }
     
     private var isSimple: Bool {
         let a1: CGFloat = angle(p1, p2, c1)
         let a2: CGFloat = angle(p1, p2, c2)
-        if (a2 < 0.0 && 0.0 < a1) || (a1 < 0.0 && 0.0 < a2) {
+        if (0.0 < a1 && a2 < 0.0) || (a1 < 0.0 && 0.0 < a2) {
             return false
         }
         let n1: NSPoint = normal(0.0)
@@ -144,38 +156,28 @@ public class Curve: Bezier {
     }
     
     private var reduce: [Curve] {
-        var segment: Curve!
-        var values: [CGFloat] = extrema.values
-        if !values.contains(0.0) {
-            values.insert(0.0, at: 0)
-        }
-        if !values.contains(1.0) {
-            values.append(1.0)
-        }
+        var values: [CGFloat] = extreme.values
+        if !values.contains(0.0) { values.insert(0.0, at: 0) }
+        if !values.contains(1.0) { values.append(1.0) }
         var firstPass = [Curve]()
-        var t1: CGFloat = values[0]
-        var t2: CGFloat = 0.0
-        for i in (1 ..< values.count) {
-            t2 = values[i]
-            segment = split(t1, t2)
-            segment.t1 = t1
-            segment.t2 = t2
-            firstPass.append(segment)
-            t1 = t2
+        for n in (1 ..< values.count) {
+            firstPass.append(split(values[n - 1], values[n]))
         }
+        var segment: Curve!
         var secondPass = [Curve]()
         // substantive intersection threshold
         let step: CGFloat = 0.01
         firstPass.forEach { (pass) in
-            t1 = 0.0
-            t2 = 0.0
+            var t1: CGFloat = 0.0
+            var t2: CGFloat = 0.0
             while t2 <= 1.0 {
                 t2 = t1 + step
-                while t2 <= (1.0 + step) {
+                while t2 < (1.0 + step) {
                     segment = pass.split(t1, t2)
                     if !segment.isSimple {
                         t2 -= step
                         if abs(t1 - t2) < step {
+                            secondPass.append(pass)
                             return
                         }
                         segment = pass.split(t1, t2)
@@ -234,7 +236,6 @@ public class Curve: Bezier {
             
             return Curve(points: [curve.p1 + n1, curve.c1 + nc1, curve.c2 + nc2, curve.p2 + n2])
         }
-        
         if reduced.count < 2 { return reduced }
         for n in (1 ..< reduced.count) {
             reduced[n].points[0] = reduced[n - 1].p2
@@ -242,44 +243,16 @@ public class Curve: Bezier {
         return reduced
     }
     
-    func getminmax(_ x: Bool, _ list: [CGFloat]) -> MinMax {
-        var list = list
-        if !list.contains(0.0) {
-            list.insert(0.0, at: 0)
-        }
-        if !list.contains(1.0) {
-            list.append(1.0)
-        }
-        var c: NSPoint = compute(0.0)
-        var minV: CGFloat = x ? c.x : c.y
-        var maxV: CGFloat = x ? c.x : c.y
-        for i in (1 ..< list.count) {
-            c = compute(list[i])
-            minV = min(minV, (x ? c.x : c.y))
-            maxV = max(maxV, (x ? c.x : c.y))
-        }
-        return MinMax(minV, maxV, (minV + maxV) / 2.0, maxV - minV)
-    }
-    
-    var bbox: Bbox {
-        let ex: Extrema = extrema
-        let x = getminmax(true, ex.x)
-        let y = getminmax(false, ex.y)
-        return Bbox(x, y)
-    }
-    
     func overlaps(_ curve: Curve) -> Bool {
-        let lbbox: Bbox = self.bbox
-        let tbbox: Bbox = curve.bbox
-        return bboxoverlap(lbbox, tbbox)
+        return bounds.intersects(curve.bounds)
     }
     
     func overlaps(_ line: Line) -> Bool {
-        let lbbox: Bbox = self.bbox
-        let tl = NSPoint(x: lbbox.x.min, y: lbbox.y.max)
-        let tr = NSPoint(x: lbbox.x.max, y: lbbox.y.max)
-        let bl = NSPoint(x: lbbox.x.min, y: lbbox.y.min)
-        let br = NSPoint(x: lbbox.x.max, y: lbbox.y.min)
+        let box: NSRect = self.bounds
+        let tl = NSPoint(x: box.minX, y: box.maxY)
+        let tr = NSPoint(x: box.maxX, y: box.maxY)
+        let bl = NSPoint(x: box.minX, y: box.minY)
+        let br = NSPoint(x: box.maxX, y: box.minY)
         return line.overlaps(Line(p1: tl, p2: tr))
             || line.overlaps(Line(p1: tr, p2: br))
             || line.overlaps(Line(p1: br, p2: bl))
@@ -287,10 +260,10 @@ public class Curve: Bezier {
     }
     
     func pairIteration(_ c1: Curve, _ c2: Curve, _ threshold: CGFloat) -> [Intersect] {
-        let c1b = c1.bbox
-        let c2b = c2.bbox
+        let c1b = c1.bounds
+        let c2b = c2.bounds
         let r: CGFloat = 100000.0 // very important value
-        if (c1b.x.size + c1b.y.size < threshold) && (c2b.x.size + c2b.y.size < threshold) {
+        if (c1b.width + c1b.height < threshold) && (c2b.width + c2b.height < threshold) {
             return [Intersect(tSelf: floor(r * (c1.t1 + c1.t2) / 2.0) / r,
                               tOther: floor(r * (c2.t1 + c2.t2) / 2.0) / r)]
         }
@@ -302,7 +275,7 @@ public class Curve: Bezier {
         pairs.append(CurvePair(cc1.right, cc2.right))
         pairs.append(CurvePair(cc1.right, cc2.left))
         pairs = pairs.filter({ (pair) -> Bool in
-            return bboxoverlap(pair.left.bbox, pair.right.bbox)
+            return pair.left.bounds.intersects(pair.right.bounds)
         })
         var results = [Intersect]()
         if pairs.isEmpty { return results }
@@ -321,6 +294,7 @@ public class Curve: Bezier {
     
     // line intersects
     func intersects(_ line: Line) -> [Intersect]? {
+        if !self.overlaps(line) { return nil }
         let result: [Intersect] = roots(points, line).compactMap { (v) -> Intersect? in
             if !between(v, 0.0, 1.0) { return nil }
             let p: NSPoint = compute(v)
@@ -368,6 +342,7 @@ public class Curve: Bezier {
     
     // curve intersects
     func intersects(_ curve: Curve, _ threshold: CGFloat = 0.5) -> [Intersect]? {
+        if !self.overlaps(curve) { return nil }
         let result: [Intersect] = intersects(self.reduce, curve.reduce, threshold)
         if result.isEmpty { return nil }
         return result

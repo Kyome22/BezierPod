@@ -43,7 +43,6 @@ public extension NSBezierPath {
             case .lineTo:
                 paths.last?.line(to: points[0])
             case .curveTo:
-                Swift.print(points)
                 paths.last?.curve(to: points[2],
                                   controlPoint1: points[0],
                                   controlPoint2: points[1])
@@ -176,9 +175,12 @@ public extension NSBezierPath {
         }
         let intersections: [NSPoint] = BezierPod.resolveIntersection(&beziers)
         let groups: [[Bezier]] = BezierPod.removeExtraPath(&beziers, originals, intersections, distance)
-        
+//        let groups = beziers.map { (b) -> [Bezier] in
+//            return [b]
+//        }
         var offsetPaths = [NSBezierPath]()
         for group in groups {
+            if group.isEmpty { continue }
             offsetPaths.append(NSBezierPath())
             offsetPaths.last!.copyAttribute(from: self)
             offsetPaths.last!.move(to: group.first!.p1)

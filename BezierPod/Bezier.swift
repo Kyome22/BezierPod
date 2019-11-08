@@ -9,8 +9,6 @@
 import Foundation
 
 fileprivate let tau = 2 * CGFloat.pi
-typealias MinMax = (min: CGFloat, max: CGFloat, mid: CGFloat, size: CGFloat)
-typealias Bbox = (x: MinMax, y: MinMax)
 
 public struct Intersect {
     public private(set) var tSelf: CGFloat
@@ -22,6 +20,7 @@ public class Bezier {
     // There are absolutely two control points
     var points: [NSPoint]
     var center: NSPoint { return .zero }
+    var bounds: NSRect { return .zero }
     public var p1: NSPoint { return points[0] }
     public var c1: NSPoint { return points[1] }
     public var c2: NSPoint { return points[2] }
@@ -54,10 +53,32 @@ public class Bezier {
         return (minV ... maxV).contains(v)
     }
     
+    func overlaps(_ bezier: Bezier) -> Bool {
+        return bounds.intersects(bezier.bounds)
+    }
+    
+    func intersects(with bezier: Bezier) -> [Intersect]? {
+        switch (self, bezier) {
+        case let (lineS as Line, lineO as Line):
+            if let intersect = lineS.intersect(lineO) {
+                return [intersect]
+            }
+            return nil
+        case let (lineS as Line, curveO as Curve):
+            return lineS.intersects(curveO)
+        case let (curveS as Curve, lineO as Line):
+            return curveS.intersects(lineO)
+        case let (curveS as Curve, curveO as Curve):
+            return curveS.intersects(curveO)
+        default:
+            return nil
+        }
+    }
+    
     func derive(_ points: [NSPoint]) -> [[NSPoint]] {
         var dpt = [[NSPoint]]()
         var p = points
-        var i: Int = p.count
+        var i: Int = p.count // つねに4
         var j: Int = i - 1
         while 1 < i {
             var list = [NSPoint]()
@@ -170,16 +191,6 @@ public class Bezier {
         let d: CGFloat = ux * vy - uy * vx
         if d == 0.0 { return nil }
         return NSPoint(x: (a * vx - ux * b) / d, y: (a * vy - uy * b) / d)
-    }
-    
-    func bboxoverlap(_ b1: Bbox, _ b2: Bbox) -> Bool {
-        if abs(b1.x.mid - b2.x.mid) >= ((b1.x.size + b2.x.size) / 2.0) {
-            return false
-        }
-        if abs(b1.y.mid - b2.y.mid) >= ((b1.y.size + b2.y.size) / 2.0) {
-            return false
-        }
-        return true
     }
     
     func eqG(_ a: [CGFloat], _ t: CGFloat) -> CGFloat {

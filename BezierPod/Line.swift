@@ -45,6 +45,13 @@ public class Line: Bezier {
         return (p1 + p2) / 2.0
     }
     
+    override var bounds: NSRect {
+        return NSRect(x: min(p1.x, p2.x),
+                      y: min(p1.y, p2.y),
+                      width: abs(p1.x - p2.x),
+                      height: abs(p1.y - p2.y))
+    }
+    
     // ★★★ Unique Method ★★★
     override func compute(_ t: CGFloat) -> NSPoint {
         return (1.0 - t) * p1 + t * p2
@@ -69,15 +76,6 @@ public class Line: Bezier {
         if len == 0.0 { return self }
         let normal: NSPoint = d * NSPoint(x: diff.y / len, y: -diff.x / len)
         return Line(p1: p1 + normal, p2: p2 + normal)
-    }
-
-    var bbox: Bbox {
-        let minX = min(p1.x, p2.x)
-        let minY = min(p1.y, p2.y)
-        let maxX = max(p1.x, p2.x)
-        let maxY = max(p1.y, p2.y)
-        return Bbox(MinMax(minX, maxX, (minX + maxX) / 2.0, maxX - minX),
-                    MinMax(minY, maxY, (minY + maxY) / 2.0, maxY - minY))
     }
     
     var reversed: Line {
@@ -137,6 +135,7 @@ public class Line: Bezier {
     
     // curve intersects
     func intersects(_ curve: Curve) -> [Intersect]? {
+        if !curve.overlaps(self) { return nil }        
         let result: [Intersect] = roots(curve.points, self).compactMap { (v) -> Intersect? in
             if !between(v, 0.0, 1.0) { return nil }
             let p: NSPoint = curve.compute(v)
