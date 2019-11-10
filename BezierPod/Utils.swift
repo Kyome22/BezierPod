@@ -6,12 +6,7 @@
 //  Copyright © 2019 Takuto Nakamura. All rights reserved.
 //
 
-import Cocoa
-
-infix operator >>> : BitwiseShiftPrecedence
-public func >>> (lhs: Int, rhs: Int) -> Int {
-    Int(bitPattern: UInt(bitPattern: lhs) >> UInt(rhs))
-}
+import CoreGraphics
 
 public func + (left: CGPoint, right: CGPoint) -> CGPoint {
     return CGPoint(x: left.x + right.x, y: left.y + right.y)
@@ -68,22 +63,13 @@ public extension CGPoint {
     func length(from: CGPoint) -> CGFloat {
         return (self - from).scalar
     }
-
-    func radian(from: CGPoint) -> CGFloat {
-        return atan2(self.y - from.y, self.x - from.x)
-    }
     
-    func innerProduct(_ v: NSPoint) -> (value: CGFloat, theta: CGFloat) {
+    func innerProduct(_ v: CGPoint) -> (value: CGFloat, theta: CGFloat) {
         let value: CGFloat = self.x * v.x + self.y * v.y
         return (value, acos(value / (self.scalar * v.scalar)))
     }
     
-    func outerProduct(_ v: NSPoint) -> (value: CGFloat, theta: CGFloat) {
-        let value: CGFloat = self.x * v.y - self.y * v.x
-        return (value, asin(value / (self.scalar * v.scalar)))
-    }
-    
-    func exteriorAngle(_ v: NSPoint) -> CGFloat {
+    func exteriorAngle(_ v: CGPoint) -> CGFloat {
         let op: CGFloat = self.x * v.y - self.y * v.x
         let theta = self.innerProduct(v).theta
         return op > 0 ? theta : -theta

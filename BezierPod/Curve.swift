@@ -6,7 +6,8 @@
 //  Copyright © 2019 Takuto Nakamura. All rights reserved.
 //
 
-import Cocoa
+import AppKit
+import CoreGraphics
 
 typealias Extreme = (x: [CGFloat], y: [CGFloat], values: [CGFloat])
 typealias CurvePair = (left: Curve, right: Curve)
@@ -16,7 +17,7 @@ public class Curve: Bezier {
     public private(set) var t1: CGFloat
     public private(set) var t2: CGFloat
     
-    public init(points: [NSPoint], t1: CGFloat = 0.0, t2: CGFloat = 1.0) {
+    public init(points: [CGPoint], t1: CGFloat = 0.0, t2: CGFloat = 1.0) {
         self.t1 = t1
         self.t2 = t2
         super.init(points: points)
@@ -35,20 +36,15 @@ public class Curve: Bezier {
         return path
     }
     
-    public var boundsPath: NSBezierPath {
-        let path = NSBezierPath(rect: bounds)
-        return path
-    }
-    
     override public var description: String {
         return "from: \(p1), ctrl1: \(c1), ctrl2: \(c2), to: \(p2), t1: \(t1), t2: \(t2)"
     }
     
-    override var center: NSPoint {
+    override var center: CGPoint {
         return (p1 + c1 + c2 + p2) / 4.0
     }
     
-    override var bounds: NSRect {
+    override var bounds: CGRect {
         return path.bounds
     }
     
@@ -58,7 +54,7 @@ public class Curve: Bezier {
         self.t2 = t2
     }
     
-    override public func compute(_ t: CGFloat) -> NSPoint {
+    override public func compute(_ t: CGFloat) -> CGPoint {
         var point = pow(1.0 - t, 3.0) * p1
         point += (3.0 * pow(1.0 - t, 2.0) * t) * c1
         point += (3.0 * (1.0 - t) * pow(t, 2.0)) * c2
@@ -66,8 +62,8 @@ public class Curve: Bezier {
         return point
     }
     
-    private func derivative(_ t: CGFloat) -> NSPoint {
-        let p: [NSPoint] = derive(points)[0]
+    private func derivative(_ t: CGFloat) -> CGPoint {
+        let p: [CGPoint] = derive(points)[0]
         let mt: CGFloat = 1.0 - t
         return pow(mt, 2.0) * p[0] + (2.0 * mt * t) * p[1] + pow(t, 2.0) * p[2]
     }
@@ -78,25 +74,25 @@ public class Curve: Bezier {
         var sum: CGFloat = 0.0
         for i in (0 ..< valuesT.count) {
             t = z * valuesT[i] + z
-            let d: NSPoint = derivative(t)
+            let d: CGPoint = derivative(t)
             sum += valuesC[i] * d.scalar
         }
         return z * sum
     }
     
-    private func normal(_ t: CGFloat) -> NSPoint {
-        let d: NSPoint = derivative(t)
+    private func normal(_ t: CGFloat) -> CGPoint {
+        let d: CGPoint = derivative(t)
         let q: CGFloat = d.scalar
-        return NSPoint(x: d.y / q, y: -d.x / q)
+        return CGPoint(x: d.y / q, y: -d.x / q)
     }
     
-    private func hull(_ t: CGFloat) -> [NSPoint] {
+    private func hull(_ t: CGFloat) -> [CGPoint] {
         // t: 0 <= t <= 1
         var p = points
-        var q: [NSPoint] = p
-        var pt = NSPoint.zero
+        var q: [CGPoint] = p
+        var pt = CGPoint.zero
         while p.count > 1 {
-            var pts = [NSPoint]()
+            var pts = [CGPoint]()
             for i in (0 ..< p.count - 1) {
                 pt = p[i] + t * (p[i + 1] - p[i])
                 q.append(pt)
@@ -108,7 +104,7 @@ public class Curve: Bezier {
     }
     
     func split(_ t: CGFloat) -> CurvePair {
-        let q: [NSPoint] = hull(t)
+        let q: [CGPoint] = hull(t)
         let left = Curve(points: [q[0], q[4], q[7], q[9]],
                          t1: map(0.0, 0.0, 1.0, t1, t2),
                          t2: map(t, 0.0, 1.0, t1, t2))
@@ -129,7 +125,7 @@ public class Curve: Bezier {
     }
     
     private var extreme: Extreme {
-        let dpts: [[NSPoint]] = derive(points)
+        let dpts: [[CGPoint]] = derive(points)
         var xRoots = [CGFloat]()
         var yRoots = [CGFloat]()
         for n in [0, 1] {
@@ -150,8 +146,8 @@ public class Curve: Bezier {
         if (0.0 < a1 && a2 < 0.0) || (a1 < 0.0 && 0.0 < a2) {
             return false
         }
-        let n1: NSPoint = normal(0.0)
-        let n2: NSPoint = normal(1.0)
+        let n1: CGPoint = normal(0.0)
+        let n2: CGPoint = normal(1.0)
         return abs(acos(n1.x * n2.x + n1.y * n2.y)) < CGFloat.pi / 3.0
     }
     
@@ -211,27 +207,27 @@ public class Curve: Bezier {
     
     func offset(_ d: CGFloat) -> [Curve] {
         if isLinear {
-            let nv: NSPoint = normal(0.0)
-            let coords: [NSPoint] = points.map { (v) -> NSPoint in
+            let nv: CGPoint = normal(0.0)
+            let coords: [CGPoint] = points.map { (v) -> CGPoint in
                 return v + d * nv
             }
             return [Curve(points: coords)]
         }
         
         let reduced = reduce.map { (curve) -> Curve in
-            let line1: NSPoint = curve.c1 - curve.p1
-            let bridge: NSPoint = curve.c2 - curve.c1
-            let line2: NSPoint = curve.p2 - curve.c2
+            let line1: CGPoint = curve.c1 - curve.p1
+            let bridge: CGPoint = curve.c2 - curve.c1
+            let line2: CGPoint = curve.p2 - curve.c2
             
             let phi1: CGFloat = line1.exteriorAngle(bridge) / 2.0
             let phi2: CGFloat = line2.exteriorAngle(bridge) / 2.0
 
-            let n1 = d * NSPoint(x: line1.y, y: -line1.x) / line1.scalar
-            let n2 = d * NSPoint(x: line2.y, y: -line2.x) / line2.scalar
+            let n1 = d * CGPoint(x: line1.y, y: -line1.x) / line1.scalar
+            let n2 = d * CGPoint(x: line2.y, y: -line2.x) / line2.scalar
             
-            let nc1 = NSPoint(x: n1.x * cos(phi1) - n1.y * sin(phi1),
+            let nc1 = CGPoint(x: n1.x * cos(phi1) - n1.y * sin(phi1),
                                y: n1.x * sin(phi1) + n1.y * cos(phi1)) / cos(phi1)
-            let nc2 = NSPoint(x: n2.x * cos(phi2) - n2.y * sin(phi2),
+            let nc2 = CGPoint(x: n2.x * cos(phi2) - n2.y * sin(phi2),
                                y: n2.x * sin(phi2) + n2.y * cos(phi2)) / cos(phi2)
             
             return Curve(points: [curve.p1 + n1, curve.c1 + nc1, curve.c2 + nc2, curve.p2 + n2])
@@ -248,11 +244,11 @@ public class Curve: Bezier {
     }
     
     func overlaps(_ line: Line) -> Bool {
-        let box: NSRect = self.bounds
-        let tl = NSPoint(x: box.minX, y: box.maxY)
-        let tr = NSPoint(x: box.maxX, y: box.maxY)
-        let bl = NSPoint(x: box.minX, y: box.minY)
-        let br = NSPoint(x: box.maxX, y: box.minY)
+        let box: CGRect = self.bounds
+        let tl = CGPoint(x: box.minX, y: box.maxY)
+        let tr = CGPoint(x: box.maxX, y: box.maxY)
+        let bl = CGPoint(x: box.minX, y: box.minY)
+        let br = CGPoint(x: box.maxX, y: box.minY)
         return line.overlaps(Line(p1: tl, p2: tr))
             || line.overlaps(Line(p1: tr, p2: br))
             || line.overlaps(Line(p1: br, p2: bl))
@@ -297,7 +293,7 @@ public class Curve: Bezier {
         if !self.overlaps(line) { return nil }
         let result: [Intersect] = roots(points, line).compactMap { (v) -> Intersect? in
             if !between(v, 0.0, 1.0) { return nil }
-            let p: NSPoint = compute(v)
+            let p: CGPoint = compute(v)
             guard let t: CGFloat = line.backCompute(p) else { return nil }
             if !between(t, 0.0, 1.0) { return nil }
             return Intersect(tSelf: v, tOther: t)
@@ -348,12 +344,12 @@ public class Curve: Bezier {
         return result
     }
     
-    override func distance(from q: NSPoint) -> (value: CGFloat, t: CGFloat) {
-        var ps: [NSPoint] = points
+    override func distance(from q: CGPoint) -> (value: CGFloat, t: CGFloat) {
+        var ps: [CGPoint] = points
         for n in (0 ..< ps.count) {
             ps[n] -= q
         }
-        var ap = [NSPoint]()
+        var ap = [CGPoint]()
         ap.append(-ps[0] + 3.0 * (ps[1] - ps[2]) + ps[3])
         ap.append(3.0 * (ps[0] - 2.0 * ps[1] + ps[2]))
         ap.append(3.0 * (ps[1] - ps[0]))

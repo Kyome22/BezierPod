@@ -6,17 +6,18 @@
 //  Copyright © 2019 Takuto Nakamura. All rights reserved.
 //
 
-import Cocoa
+import AppKit
+import CoreGraphics
 
 typealias LinePair = (left: Line, right: Line)
 
 public class Line: Bezier {
     
-    public init(p1: NSPoint, p2: NSPoint) {
+    public init(p1: CGPoint, p2: CGPoint) {
         super.init(points: [p1, p1, p2, p2])
     }
     
-    public init(p: NSPoint, v: NSPoint, length: CGFloat) {
+    public init(p: CGPoint, v: CGPoint, length: CGFloat) {
         let len: CGFloat = v.length(from: p)
         if len == 0.0 {
             fatalError("Error: p and v must be different points.")
@@ -41,23 +42,23 @@ public class Line: Bezier {
         return "p1: \(p1), p2: \(p2)"
     }
     
-    override var center: NSPoint {
+    override var center: CGPoint {
         return (p1 + p2) / 2.0
     }
     
-    override var bounds: NSRect {
-        return NSRect(x: min(p1.x, p2.x),
+    override var bounds: CGRect {
+        return CGRect(x: min(p1.x, p2.x),
                       y: min(p1.y, p2.y),
                       width: abs(p1.x - p2.x),
                       height: abs(p1.y - p2.y))
     }
     
     // ★★★ Unique Method ★★★
-    override func compute(_ t: CGFloat) -> NSPoint {
+    override func compute(_ t: CGFloat) -> CGPoint {
         return (1.0 - t) * p1 + t * p2
     }
     
-    func backCompute(_ p: NSPoint) -> CGFloat? {
+    func backCompute(_ p: CGPoint) -> CGFloat? {
         let tx: CGFloat = (p.x - p1.x) / (p2.x - p1.x)
         let ty: CGFloat = (p.y - p1.y) / (p2.y - p1.y)
         if approximately(tx - ty, 0.0) {
@@ -71,23 +72,15 @@ public class Line: Bezier {
     }
     
     func offset(_ d: CGFloat) -> Line {
-        let diff: NSPoint = p2 - p1
+        let diff: CGPoint = p2 - p1
         let len: CGFloat = diff.scalar
         if len == 0.0 { return self }
-        let normal: NSPoint = d * NSPoint(x: diff.y / len, y: -diff.x / len)
+        let normal: CGPoint = d * CGPoint(x: diff.y / len, y: -diff.x / len)
         return Line(p1: p1 + normal, p2: p2 + normal)
     }
     
     var reversed: Line {
         return Line(p1: p2, p2: p1)
-    }
-    
-    func extend(_ left: CGFloat, _ right: CGFloat) -> Line {
-        let len: CGFloat = lineLength
-        if len == 0.0 { return self }
-        let newP1 = (1.0 + left / len) * p1 - (left / len) * p2
-        let newP2 = (1.0 + right / len) * p2 - (right / len) * p1
-        return Line(p1: newP1, p2: newP2)
     }
     
     func overlaps(_ line: Line) -> Bool {
@@ -138,7 +131,7 @@ public class Line: Bezier {
         if !curve.overlaps(self) { return nil }        
         let result: [Intersect] = roots(curve.points, self).compactMap { (v) -> Intersect? in
             if !between(v, 0.0, 1.0) { return nil }
-            let p: NSPoint = curve.compute(v)
+            let p: CGPoint = curve.compute(v)
             guard let t: CGFloat = backCompute(p) else { return nil }
             if !between(t, 0.0, 1.0) { return nil }
             return Intersect(tSelf: t, tOther: v)
@@ -148,7 +141,7 @@ public class Line: Bezier {
     }
     
     func split(_ t: CGFloat) -> LinePair {
-        let p: NSPoint = (1.0 - t) * p1 + t * p2
+        let p: CGPoint = (1.0 - t) * p1 + t * p2
         let left = Line(p1: p1, p2: p)
         let right = Line(p1: p, p2: p2)
         return LinePair(left, right)
@@ -165,11 +158,11 @@ public class Line: Bezier {
                     p2: (1.0 - t2) * p1 + t2 * p2)
     }
     
-    func split(_ via: NSPoint) -> LinePair {
+    func split(_ via: CGPoint) -> LinePair {
         return LinePair(Line(p1: p1, p2: via), Line(p1: via, p2: p2))
     }
 
-    override func distance(from q: NSPoint) -> (value: CGFloat, t: CGFloat) {
+    override func distance(from q: CGPoint) -> (value: CGFloat, t: CGFloat) {
         let dx: CGFloat = p2.x - p1.x
         let dy: CGFloat = p2.y - p1.y
         if dx == 0.0 && dy == 0.0 {
@@ -199,7 +192,7 @@ public class Line: Bezier {
         } else if 1.0 < t {
             return (q.length(from: p2), 1.0)
         }
-        let Q = NSPoint(x: q.x - (1.0 - t) * p1.x - t * p2.x,
+        let Q = CGPoint(x: q.x - (1.0 - t) * p1.x - t * p2.x,
                         y: q.y - (1.0 - t) * p1.y - t * p2.y)
         return (Q.scalar, t)
     }

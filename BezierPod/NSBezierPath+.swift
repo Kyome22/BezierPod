@@ -6,7 +6,8 @@
 //  Copyright © 2019 Takuto Nakamura. All rights reserved.
 //
 
-import Cocoa
+import AppKit
+import CoreGraphics
 
 public enum Corner {
     case bevel
@@ -33,7 +34,7 @@ public extension NSBezierPath {
     
     var disassembled: [NSBezierPath] {
         var paths = [NSBezierPath]()
-        var points = [NSPoint](repeating: NSPoint.zero, count: 3)
+        var points = [CGPoint](repeating: CGPoint.zero, count: 3)
         for i in (0 ..< self.elementCount) {
             switch self.element(at: i, associatedPoints: &points) {
             case .moveTo:
@@ -62,9 +63,9 @@ public extension NSBezierPath {
     
     var length: CGFloat {
         var length: CGFloat = 0.0
-        var prePoint = NSPoint.zero
-        var lastMoved = NSPoint.zero
-        var points = [NSPoint](repeating: NSPoint.zero, count: 3)
+        var prePoint = CGPoint.zero
+        var lastMoved = CGPoint.zero
+        var points = [CGPoint](repeating: CGPoint.zero, count: 3)
         for i in (0 ..< self.elementCount) {
             switch self.element(at: i, associatedPoints: &points) {
             case .moveTo:
@@ -87,15 +88,15 @@ public extension NSBezierPath {
     }
     
     // ★★★ Table of points ★★★
-    func getLookUpTable(density: CGFloat) -> [NSPoint] {
-        var lut = [NSPoint]()
+    func getLookUpTable(density: CGFloat) -> [CGPoint] {
+        var lut = [CGPoint]()
         if density <= 0.0 || 1.0 < density { return lut }
         var len: CGFloat = 0
         var cnt: Int = 0
         var fin: Int = 0
-        var prePoint = NSPoint.zero
-        var lastMoved = NSPoint.zero
-        var points = [NSPoint](repeating: NSPoint.zero, count: 3)
+        var prePoint = CGPoint.zero
+        var lastMoved = CGPoint.zero
+        var points = [CGPoint](repeating: CGPoint.zero, count: 3)
         for i in (0 ..< self.elementCount) {
             fin = (i == self.elementCount - 1 ? 1 : 0)
             switch self.element(at: i, associatedPoints: &points) {
@@ -131,53 +132,56 @@ public extension NSBezierPath {
     }
     
     // ★★★ Get Offset Path ★★★
+    // not support compound path completely...
     func offset(_ distance: CGFloat, _ corner: Corner = .miter) -> [NSBezierPath] {
         if distance == 0.0 { return [self] }
         if self.elementCount < 2 { return [] }
         var originals = [Bezier]()
-        var beziers = [Bezier]()
-        var prePoint = NSPoint.zero
-        var lastMoved = NSPoint.zero
-        var points = [NSPoint](repeating: NSPoint.zero, count: 3)
+        var list = [[Bezier]]()
+        var prePoint = CGPoint.zero
+        var lastMoved = CGPoint.zero
+        var points = [CGPoint](repeating: CGPoint.zero, count: 3)
         for i in (0 ..< self.elementCount) {
             switch self.element(at: i, associatedPoints: &points) {
             case .moveTo:
                 prePoint = points[0]
                 lastMoved = points[0]
+                list.append([])
             case .lineTo:
                 let line = Line(p1: prePoint, p2: points[0])
                 originals.append(line)
                 let offset: Line = line.offset(distance)
-                BezierPod.lineOffsetProcess(&beziers, offset, distance, corner)
-                beziers.append(offset)
+                BezierPod.lineOffsetProcess(&list[list.count - 1], offset, distance, corner)
+                list[list.count - 1].append(offset)
                 prePoint = points[0]
             case .curveTo:
                 let curve = Curve(points: [prePoint] + points)
                 originals.append(curve)
                 let offsets: [Curve] = curve.offset(distance)
-                BezierPod.curveOffsetProcess(&beziers, offsets[0], distance, corner)
-                beziers.append(contentsOf: offsets)
+                BezierPod.curveOffsetProcess(&list[list.count - 1], offsets[0], distance, corner)
+                list[list.count - 1].append(contentsOf: offsets)
                 prePoint = points[2]
             case.closePath:
+                if list[list.count - 1].isEmpty { break }
                 let line = Line(p1: prePoint, p2: lastMoved)
                 originals.append(line)
                 let offset: Line = line.offset(distance)
-                BezierPod.lineOffsetProcess(&beziers, offset, distance, corner)
-                beziers.append(offset)
-                if let first = beziers.first as? Curve {
-                    BezierPod.curveOffsetProcess(&beziers, first, distance, corner)
-                } else if let first = beziers.first as? Line {
-                    BezierPod.lineOffsetProcess(&beziers, first, distance, corner)
+                BezierPod.lineOffsetProcess(&list[list.count - 1], offset, distance, corner)
+                list[list.count - 1].append(offset)
+                if let line = list[list.count - 1].first as? Line {
+                    BezierPod.lineOffsetProcess(&list[list.count - 1], line, distance, corner)
+                } else if let curve = list[list.count - 1].first as? Curve {
+                    BezierPod.curveOffsetProcess(&list[list.count - 1], curve, distance, corner)
                 }
             @unknown default:
                 fatalError()
             }
         }
-        let intersections: [NSPoint] = BezierPod.resolveIntersection(&beziers)
-        let groups: [[Bezier]] = BezierPod.removeExtraPath(&beziers, originals, intersections, distance)
-//        let groups = beziers.map { (b) -> [Bezier] in
-//            return [b]
-//        }
+        var groups = [[Bezier]]()
+        for n in (0 ..< list.count) {
+            let intersections: [CGPoint] = BezierPod.resolveIntersection(&list[n])
+            groups.append(contentsOf: BezierPod.removeExtraPath(list[n], originals, intersections, distance))
+        }
         var offsetPaths = [NSBezierPath]()
         for group in groups {
             if group.isEmpty { continue }
@@ -193,7 +197,7 @@ public extension NSBezierPath {
                     offsetPaths.last!.line(to: line.p2)
                 }
             }
-            if group.last!.p2.length(from: group.first!.p1) < 0.5 {
+            if BezierPod.isError(group.last!.p2, group.first!.p1) {
                 offsetPaths.last!.close()
             }
         }
@@ -220,172 +224,4 @@ public extension NSBezierPath {
         
     }
     
-    // 現状のこいつはあくまで開始点と終了点が1つずつの時の一番短いBezier曲線でしか動かない
-    func getSplitSegment(_ t: CGFloat) -> NSBezierPath? {
-        var paths = [NSBezierPath]()
-        if t <= 0.0 || 1.0 <= t { return nil }
-        var prePoint = NSPoint.zero
-        var points = [NSPoint](repeating: NSPoint.zero, count: 3)
-        for i in (0 ..< self.elementCount) {
-            switch self.element(at: i, associatedPoints: &points) {
-            case .moveTo:
-                paths.append(NSBezierPath())
-                paths.last?.copyAttribute(from: self)
-                paths.last?.move(to: points[0])
-                prePoint = points[0]
-            case .lineTo:
-                let pt = prePoint + t * (points[0] - prePoint)
-                paths.last?.line(to: pt)
-                paths.append(NSBezierPath())
-                paths.last?.copyAttribute(from: self)
-                paths.last?.move(to: pt)
-                paths.last?.line(to: points[0])
-                prePoint = points[0]
-            case .curveTo:
-                let pts = Curve(points: [prePoint] + points).split(t)
-                let left = pts.left.points
-                let right = pts.right.points
-                paths.last?.curve(to: left[3], controlPoint1: left[1], controlPoint2: left[2])
-                paths.append(NSBezierPath())
-                paths.last?.copyAttribute(from: self)
-                paths.last?.move(to: right[0])
-                paths.last?.curve(to: right[3], controlPoint1: right[1], controlPoint2: right[2])
-                prePoint = points[2]
-            case.closePath:
-                paths.last?.close()
-            @unknown default:
-                fatalError()
-            }
-        }
-        return paths.isEmpty ? nil : paths.first!
-    }
-    
-    func getSplitSegment(_ t1: CGFloat, _ t2: CGFloat) -> NSBezierPath? {
-        var paths = [NSBezierPath]()
-        if !(0.0 ... 1.0).contains(t1) || !(0.0 ... 1.0).contains(t2) || t1 > t2 { return nil }
-        var prePoint = NSPoint.zero
-        var points = [NSPoint](repeating: NSPoint.zero, count: 3)
-        for i in (0 ..< self.elementCount) {
-            switch self.element(at: i, associatedPoints: &points) {
-            case .moveTo:
-                prePoint = points[0]
-            case .lineTo:
-                let pt1 = prePoint + t1 * (points[0] - prePoint)
-                let pt2 = prePoint + t2 * (points[0] - prePoint)
-                paths.append(NSBezierPath())
-                paths.last?.copyAttribute(from: self)
-                paths.last?.move(to: pt1)
-                paths.last?.line(to: pt2)
-                prePoint = points[0]
-            case .curveTo:
-                let pts = Curve(points: [prePoint] + points).split(t1, t2).points
-                paths.append(NSBezierPath())
-                paths.last?.copyAttribute(from: self)
-                paths.last?.move(to: pts[0])
-                paths.last?.curve(to: pts[3], controlPoint1: pts[1], controlPoint2: pts[2])
-                prePoint = points[2]
-            case.closePath:
-                paths.last?.close()
-            @unknown default:
-                fatalError()
-            }
-        }
-        return paths.isEmpty ? nil : paths.first!
-    }
-    
-    // 現状のこいつはあくまで開始点と終了点が1つずつの時の一番短いBezier曲線でしか動かない
-    func getLineIntersects(_ line: Line) -> [NSPoint] {
-        var intersects = [NSPoint]()
-        var prePoint = NSPoint.zero
-        var points = [NSPoint](repeating: NSPoint.zero, count: 3)
-        for i in (0 ..< self.elementCount) {
-            switch self.element(at: i, associatedPoints: &points) {
-            case .moveTo:
-                prePoint = points[0]
-            case .lineTo:
-                prePoint = points[0]
-            case .curveTo:
-                let bezier = Curve(points: [prePoint] + points)
-                bezier.intersects(line)?.forEach({ (intersect) in
-                    intersects.append(bezier.compute(intersect.tSelf))
-                })
-                prePoint = points[2]
-            case.closePath:
-                break
-            @unknown default:
-                fatalError()
-            }
-        }
-        return intersects
-    }
-    
-    // 現状のこいつはあくまで開始点と終了点が1つずつの時の一番短いBezier曲線でしか動かない
-    func getSelfIntersects() -> [NSPoint] {
-        var intersects = [NSPoint]()
-        var prePoint = NSPoint.zero
-        var points = [NSPoint](repeating: NSPoint.zero, count: 3)
-        for i in (0 ..< self.elementCount) {
-            switch self.element(at: i, associatedPoints: &points) {
-            case .moveTo:
-                prePoint = points[0]
-            case .lineTo:
-                prePoint = points[0]
-            case .curveTo:
-                let bezier = Curve(points: [prePoint] + points)
-                bezier.intersects()?.forEach({ (intersect) in
-                    intersects.append(bezier.compute(intersect.tSelf))
-                })
-                prePoint = points[2]
-            case.closePath:
-                break
-            @unknown default:
-                fatalError()
-            }
-        }
-        return intersects
-    }
-    
-    func getCurveIntersects(_ other: NSBezierPath) -> [NSPoint] {
-        var intersects = [NSPoint]()
-        var selfPrePoint = NSPoint.zero
-        var selfPoints = [NSPoint](repeating: NSPoint.zero, count: 3)
-        var otherPrePoint = NSPoint.zero
-        var otherPoints = [NSPoint](repeating: NSPoint.zero, count: 3)
-        
-        for i in (0 ..< self.elementCount) {
-            switch self.element(at: i, associatedPoints: &selfPoints) {
-            case .moveTo:
-                selfPrePoint = selfPoints[0]
-            case .lineTo:
-                selfPrePoint = selfPoints[0]
-            case .curveTo:
-                let selfBezier = Curve(points: [selfPrePoint] + selfPoints)
-                for j in (0 ..< other.elementCount) {
-                    switch other.element(at: j, associatedPoints: &otherPoints) {
-                    case .moveTo:
-                        otherPrePoint = otherPoints[0]
-                    case .lineTo:
-                        otherPrePoint = otherPoints[0]
-                    case .curveTo:
-                        let otherBezier = Curve(points: [otherPrePoint] + otherPoints)
-                        selfBezier.intersects(otherBezier)?.forEach({ (intersect) in
-                            intersects.append(selfBezier.compute(intersect.tSelf))
-                        })
-                        otherPrePoint = otherPoints[2]
-                    case.closePath:
-                        break
-                    @unknown default:
-                        fatalError()
-                    }
-                }
-                selfPrePoint = selfPoints[2]
-            case.closePath:
-                break
-            @unknown default:
-                fatalError()
-            }
-        }
-        return intersects
-    }
-        
 }

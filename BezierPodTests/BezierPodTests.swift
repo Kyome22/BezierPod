@@ -20,7 +20,7 @@ class BezierPodTests: XCTestCase {
     }
 
     func testCurveDistance() {
-        let b = Curve(points: [NSPoint(x: 5, y: 5), NSPoint(x: 15, y: 60), NSPoint(x: 35, y: -45), NSPoint(x: 50, y: 15)])
+        let b = Curve(points: [CGPoint(x: 5, y: 5), CGPoint(x: 15, y: 60), CGPoint(x: 35, y: -45), CGPoint(x: 50, y: 15)])
         let p = b.compute(0.34)
         let l = b.distance(from: p)
         Swift.print(String(format: "%08lf", l.value))

@@ -19,7 +19,6 @@
 		1C0D099B235C01EC000A804D /* LegendreGauss.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C62D3292295536800823040 /* LegendreGauss.swift */; };
 		1C39C6322350D59400290B72 /* Line.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C39C6312350D59400290B72 /* Line.swift */; };
 		1C39C63423511EEB00290B72 /* Bezier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C39C63323511EEB00290B72 /* Bezier.swift */; };
-		1C62D31F22954D6B00823040 /* BezierPod.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C62D31D22954D6B00823040 /* BezierPod.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1C62D32622954DC200823040 /* BezierPod.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C62D32522954DC200823040 /* BezierPod.swift */; };
 		1C62D3282295523D00823040 /* NSBezierPath+.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C62D3272295523D00823040 /* NSBezierPath+.swift */; };
 		1C62D32A2295536800823040 /* LegendreGauss.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C62D3292295536800823040 /* LegendreGauss.swift */; };
@@ -57,7 +56,6 @@
 		1C39C6312350D59400290B72 /* Line.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Line.swift; sourceTree = "<group>"; };
 		1C39C63323511EEB00290B72 /* Bezier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bezier.swift; sourceTree = "<group>"; };
 		1C62D31A22954D6B00823040 /* BezierPod.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = BezierPod.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		1C62D31D22954D6B00823040 /* BezierPod.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BezierPod.h; sourceTree = "<group>"; };
 		1C62D31E22954D6B00823040 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1C62D32522954DC200823040 /* BezierPod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BezierPod.swift; sourceTree = "<group>"; };
 		1C62D3272295523D00823040 /* NSBezierPath+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSBezierPath+.swift"; sourceTree = "<group>"; };
@@ -132,7 +130,6 @@
 		1C62D31C22954D6B00823040 /* BezierPod */ = {
 			isa = PBXGroup;
 			children = (
-				1C62D31D22954D6B00823040 /* BezierPod.h */,
 				1C62D32B2295583300823040 /* Utils.swift */,
 				1C62D32522954DC200823040 /* BezierPod.swift */,
 				1C39C63323511EEB00290B72 /* Bezier.swift */,
@@ -167,7 +164,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1C62D31F22954D6B00823040 /* BezierPod.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

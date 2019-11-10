@@ -24,11 +24,4 @@ extension NSColor {
     convenience init(hue: CGFloat) {
         self.init(hue: hue, saturation: 0.9, brightness: 1.0, alpha: 1.0)
     }
-    
-    static var randomColor: NSColor {
-        let r = CGFloat.random(in: 0 ... 255) / 255.0
-        let g = CGFloat.random(in: 0 ... 255) / 255.0
-        let b = CGFloat.random(in: 0 ... 255) / 255.0
-        return NSColor(red: r, green: g, blue: b, alpha: 1.0)
-    }
 }

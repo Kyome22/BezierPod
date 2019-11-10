@@ -6,7 +6,7 @@
 //  Copyright © 2019 Takuto Nakamura. All rights reserved.
 //
 
-import Foundation
+import CoreGraphics
 
 fileprivate let tau = 2 * CGFloat.pi
 
@@ -18,27 +18,27 @@ public struct Intersect {
 public class Bezier {
     // fromPoint, controlPoint1, controlPoint2, toPoint
     // There are absolutely two control points
-    var points: [NSPoint]
-    var center: NSPoint { return .zero }
-    var bounds: NSRect { return .zero }
-    public var p1: NSPoint { return points[0] }
-    public var c1: NSPoint { return points[1] }
-    public var c2: NSPoint { return points[2] }
-    public var p2: NSPoint { return points[3] }
+    var points: [CGPoint]
+    var center: CGPoint { return .zero }
+    var bounds: CGRect { return .zero }
+    public var p1: CGPoint { return points[0] }
+    public var c1: CGPoint { return points[1] }
+    public var c2: CGPoint { return points[2] }
+    public var p2: CGPoint { return points[3] }
     public var description: String { return "" }
     
-    init(points: [NSPoint]) {
+    init(points: [CGPoint]) {
         if points.count != 4 {
             fatalError("Error: Bezier needs 4 points.")
         }
         self.points = points
     }
     
-    func compute(_ t: CGFloat) -> NSPoint {
-        return NSPoint.zero
+    func compute(_ t: CGFloat) -> CGPoint {
+        return CGPoint.zero
     }
     
-    func distance(from q: NSPoint) -> (value: CGFloat, t: CGFloat) {
+    func distance(from q: CGPoint) -> (value: CGFloat, t: CGFloat) {
         return (0.0, 0.0)
     }
     
@@ -75,13 +75,13 @@ public class Bezier {
         }
     }
     
-    func derive(_ points: [NSPoint]) -> [[NSPoint]] {
-        var dpt = [[NSPoint]]()
+    func derive(_ points: [CGPoint]) -> [[CGPoint]] {
+        var dpt = [[CGPoint]]()
         var p = points
-        var i: Int = p.count // つねに4
+        var i: Int = p.count
         var j: Int = i - 1
         while 1 < i {
-            var list = [NSPoint]()
+            var list = [CGPoint]()
             for k in (0 ..< j) {
                 list.append(CGFloat(j) * (p[k + 1] - p[k]))
             }
@@ -101,8 +101,8 @@ public class Bezier {
         return v < 0 ? -pow(-v, 1.0 / 3.0) : pow(v, 1.0 / 3.0)
     }
     
-    func roots(_ points: [NSPoint], _ line: Line)-> [CGFloat] {
-        let p: [NSPoint] = align(points, line)
+    func roots(_ points: [CGPoint], _ line: Line)-> [CGFloat] {
+        let p: [CGPoint] = align(points, line)
         var a: CGFloat = 3.0 * p[0].y - 6.0 * p[1].y + 3.0 * p[2].y
         var b: CGFloat = -3.0 * p[0].y + 3.0 * p[1].y
         var c: CGFloat = p[0].y
@@ -163,7 +163,7 @@ public class Bezier {
         return []
     }
     
-    func angle(_ o: NSPoint, _ p1: NSPoint, _ p2: NSPoint) -> CGFloat {
+    func angle(_ o: CGPoint, _ p1: CGPoint, _ p2: CGPoint) -> CGFloat {
         let dx1: CGFloat = p1.x - o.x
         let dy1: CGFloat = p1.y - o.y
         let dx2: CGFloat = p2.x - o.x
@@ -171,26 +171,14 @@ public class Bezier {
         return atan2(dx1 * dy2 - dy1 * dx2, dx1 * dx2 + dy1 * dy2)
     }
     
-    func align(_ points: [NSPoint], _ line: Line) -> [NSPoint] {
+    func align(_ points: [CGPoint], _ line: Line) -> [CGPoint] {
         let tx: CGFloat = line.p1.x
         let ty: CGFloat = line.p1.y
         let a = -atan2(line.p2.y - ty, line.p2.x - tx)
-        return points.map { (v) -> NSPoint in
-            return NSPoint(x: (v.x - tx) * cos(a) - (v.y - ty) * sin(a),
+        return points.map { (v) -> CGPoint in
+            return CGPoint(x: (v.x - tx) * cos(a) - (v.y - ty) * sin(a),
                            y: (v.x - tx) * sin(a) + (v.y - ty) * cos(a))
         }
-    }
-    
-    func lli(p1: NSPoint, p2: NSPoint, p3: NSPoint, p4: NSPoint) -> NSPoint? {
-        let a: CGFloat = p1.x * p2.y - p1.y * p2.x
-        let b: CGFloat = p3.x * p4.y - p3.y * p4.x
-        let ux: CGFloat = p1.x - p2.x
-        let uy: CGFloat = p1.y - p2.y
-        let vx: CGFloat = p3.x - p4.x
-        let vy: CGFloat = p3.y - p4.y
-        let d: CGFloat = ux * vy - uy * vx
-        if d == 0.0 { return nil }
-        return NSPoint(x: (a * vx - ux * b) / d, y: (a * vy - uy * b) / d)
     }
     
     func eqG(_ a: [CGFloat], _ t: CGFloat) -> CGFloat {

@@ -6,7 +6,7 @@
 //  Copyright © 2019 Takuto Nakamura. All rights reserved.
 //
 
-import Foundation
+import CoreGraphics
 
 let valuesT: [CGFloat] =
     [-0.0640568928626056260850430826247450385909,
