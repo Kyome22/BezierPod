@@ -23,7 +23,7 @@ public class Curve: Bezier {
         super.init(points: points)
     }
     
-    public func updateSelf(_ curve: Curve) {
+    func updateSelf(_ curve: Curve) {
         self.points = curve.points
         self.t1 = curve.t1
         self.t2 = curve.t2
@@ -62,7 +62,18 @@ public class Curve: Bezier {
         return point
     }
     
-    private func derivative(_ t: CGFloat) -> CGPoint {
+//    func backCompute(in rect: CGRect) -> CGFloat? {
+//        let tl = NSPoint(x: rect.minX, y: rect.maxY)
+//        let bl = NSPoint(x: rect.minX, y: rect.minY)
+//        let tr = NSPoint(x: rect.maxX, y: rect.maxY)
+//        let br = NSPoint(x: rect.maxX, y: rect.minY)
+//        var ts = [CGFloat]()
+//        ts.append(contentsOf: roots(Line(p1: tl, p2: br)))
+//        ts.append(contentsOf: roots(Line(p1: bl, p2: tr)))
+//        return ts.first
+//    }
+    
+    func derivative(_ t: CGFloat) -> CGPoint {
         let p: [CGPoint] = derive(points)[0]
         let mt: CGFloat = 1.0 - t
         return pow(mt, 2.0) * p[0] + (2.0 * mt * t) * p[1] + pow(t, 2.0) * p[2]
@@ -80,13 +91,22 @@ public class Curve: Bezier {
         return z * sum
     }
     
-    private func normal(_ t: CGFloat) -> CGPoint {
+    func normal(_ t: CGFloat) -> CGPoint {
         let d: CGPoint = derivative(t)
         let q: CGFloat = d.scalar
         return CGPoint(x: d.y / q, y: -d.x / q)
     }
     
-    private func hull(_ t: CGFloat) -> [CGPoint] {
+    func roots(_ line: Line) -> [Intersect] {
+        return roots(points, line).compactMap { (tSelf) -> Intersect? in
+            guard let tOther = line.backCompute(compute(tSelf)) else {
+                return nil
+            }
+            return Intersect(tSelf: tSelf, tOther: tOther)
+        }
+    }
+    
+    func hull(_ t: CGFloat) -> [CGPoint] {
         // t: 0 <= t <= 1
         var p = points
         var q: [CGPoint] = p
@@ -114,7 +134,7 @@ public class Curve: Bezier {
         return (left, right)
     }
     
-    func split(_ t1: CGFloat, _ t2: CGFloat) -> Curve {
+    public func split(_ t1: CGFloat, _ t2: CGFloat) -> Curve {
         if t1 <= 0.0 {
             return split(t2).left
         }
@@ -124,7 +144,7 @@ public class Curve: Bezier {
         return split(t1).right.split(map(t2, t1, 1.0, 0.0, 1.0)).left
     }
     
-    private var extreme: Extreme {
+    var extreme: Extreme {
         let dpts: [[CGPoint]] = derive(points)
         var xRoots = [CGFloat]()
         var yRoots = [CGFloat]()
@@ -140,7 +160,7 @@ public class Curve: Bezier {
         return Extreme(xRoots, yRoots, roots)
     }
     
-    private var isSimple: Bool {
+    var isSimple: Bool {
         let a1: CGFloat = angle(p1, p2, c1)
         let a2: CGFloat = angle(p1, p2, c2)
         if (0.0 < a1 && a2 < 0.0) || (a1 < 0.0 && 0.0 < a2) {
@@ -151,7 +171,7 @@ public class Curve: Bezier {
         return abs(acos(n1.x * n2.x + n1.y * n2.y)) < CGFloat.pi / 3.0
     }
     
-    private var reduce: [Curve] {
+    var reduce: [Curve] {
         var values: [CGFloat] = extreme.values
         if !values.contains(0.0) { values.insert(0.0, at: 0) }
         if !values.contains(1.0) { values.append(1.0) }
@@ -196,7 +216,7 @@ public class Curve: Bezier {
         return secondPass
     }
     
-    private var isLinear: Bool {
+    var isLinear: Bool {
         for a in align(points, Line(p1: points.first!, p2: points.last!)) {
             if abs(a.y) > 0.0001 {
                 return false
@@ -259,22 +279,37 @@ public class Curve: Bezier {
         let c1b = c1.bounds
         let c2b = c2.bounds
         let r: CGFloat = 100000.0 // very important value
-        if (c1b.width + c1b.height < threshold) && (c2b.width + c2b.height < threshold) {
+        if (c1b.width + c1b.height) < threshold && (c2b.width + c2b.height) < threshold {
             return [Intersect(tSelf: floor(r * (c1.t1 + c1.t2) / 2.0) / r,
                               tOther: floor(r * (c2.t1 + c2.t2) / 2.0) / r)]
         }
-        let cc1 = c1.split(0.5)
-        let cc2 = c2.split(0.5)
         var pairs = [CurvePair]()
-        pairs.append(CurvePair(cc1.left, cc2.left))
-        pairs.append(CurvePair(cc1.left, cc2.right))
-        pairs.append(CurvePair(cc1.right, cc2.right))
-        pairs.append(CurvePair(cc1.right, cc2.left))
+        if c1b.width + c1b.height < threshold {
+            let cc2 = c2.split(0.5)
+            pairs.append(CurvePair(c1, cc2.left))
+            pairs.append(CurvePair(c1, cc2.right))
+        } else if c2b.width + c2b.height < threshold {
+            let cc1 = c1.split(0.5)
+            pairs.append(CurvePair(cc1.left, c2))
+            pairs.append(CurvePair(cc1.right, c2))
+        } else {
+            let cc1 = c1.split(0.5)
+            let cc2 = c2.split(0.5)
+            pairs.append(CurvePair(cc1.left, cc2.left))
+            pairs.append(CurvePair(cc1.left, cc2.right))
+            pairs.append(CurvePair(cc1.right, cc2.left))
+            pairs.append(CurvePair(cc1.right, cc2.right))
+        }
         pairs = pairs.filter({ (pair) -> Bool in
             return pair.left.bounds.intersects(pair.right.bounds)
         })
         var results = [Intersect]()
-        if pairs.isEmpty { return results }
+        if pairs.isEmpty {
+            if c1b.center.length(from: c2b.center) < threshold {
+                Swift.print(c1b.width, c1b.height, c2b.width, c2b.height)
+            }
+            return results
+        }
         pairs.forEach { (pair) in
             results.append(contentsOf: pairIteration(pair.left, pair.right, threshold))
         }
@@ -291,19 +326,13 @@ public class Curve: Bezier {
     // line intersects
     func intersects(_ line: Line) -> [Intersect]? {
         if !self.overlaps(line) { return nil }
-        let result: [Intersect] = roots(points, line).compactMap { (v) -> Intersect? in
-            if !between(v, 0.0, 1.0) { return nil }
-            let p: CGPoint = compute(v)
-            guard let t: CGFloat = line.backCompute(p) else { return nil }
-            if !between(t, 0.0, 1.0) { return nil }
-            return Intersect(tSelf: v, tOther: t)
-        }
+        let result: [Intersect] = roots(line)
         if result.isEmpty { return nil }
         return result
     }
     
     // intersects base
-    private func intersects(_ c1: [Curve], _ c2: [Curve], _ threshold: CGFloat) -> [Intersect] {
+    func intersects(_ c1: [Curve], _ c2: [Curve], _ threshold: CGFloat) -> [Intersect] {
         var pairs = [CurvePair]()
         c1.forEach { (left) in
             c2.forEach { (right) in
@@ -325,7 +354,12 @@ public class Curve: Bezier {
     
     // self intersects
     func intersects(_ threshold: CGFloat = 0.5) -> [Intersect]? {
+        let splitedCurve: CurvePair = split(0.5)
+        if !splitedCurve.left.overlaps(splitedCurve.right) {
+            return nil
+        }
         let reduced: [Curve] = reduce
+        if reduced.count < 2 { return nil }
         var results = [Intersect]()
         for i in (0 ..< reduced.count - 2) {
             let left: [Curve] = [reduced[i]]

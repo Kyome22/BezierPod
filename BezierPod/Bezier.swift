@@ -57,6 +57,13 @@ public class Bezier {
         return bounds.intersects(bezier.bounds)
     }
     
+    func selfIntersects() -> [Intersect]? {
+        if let curve = self as? Curve {
+            return curve.intersects()
+        }
+        return nil
+    }
+    
     func intersects(with bezier: Bezier) -> [Intersect]? {
         switch (self, bezier) {
         case let (lineS as Line, lineO as Line):
@@ -93,7 +100,7 @@ public class Bezier {
         return dpt
     }
     
-    func map(_ v: CGFloat, _ ds: CGFloat, _ de: CGFloat, _ ts: CGFloat, _ te: CGFloat) -> CGFloat {
+    public func map(_ v: CGFloat, _ ds: CGFloat, _ de: CGFloat, _ ts: CGFloat, _ te: CGFloat) -> CGFloat {
         return ts + (te - ts) * ((v - ds) / (de - ds))
     }
     
@@ -101,6 +108,7 @@ public class Bezier {
         return v < 0 ? -pow(-v, 1.0 / 3.0) : pow(v, 1.0 / 3.0)
     }
     
+    // ベジェ曲線と直線の交点のt
     func roots(_ points: [CGPoint], _ line: Line)-> [CGFloat] {
         let p: [CGPoint] = align(points, line)
         var a: CGFloat = 3.0 * p[0].y - 6.0 * p[1].y + 3.0 * p[2].y

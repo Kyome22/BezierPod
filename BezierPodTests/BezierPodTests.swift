@@ -25,6 +25,26 @@ class BezierPodTests: XCTestCase {
         let l = b.distance(from: p)
         Swift.print(String(format: "%08lf", l.value))
     }
+    
+    func testMeu() {
+        let points = [NSPoint(x: 184.92578125, y: 306.47265625),
+                        NSPoint(x: 64.1484375,   y: 103.9140625),
+                        NSPoint(x: 349.3828125,  y: 343.625),
+                        NSPoint(x: 396.18359375, y: 82.67578125)]
+        let curve = Curve(points: points)
+        let line = Line(p1: NSPoint(x: 396.18359375, y: 82.67578125),
+                        p2: NSPoint(x: 125.9140625,  y: 335.80859375))
+        let roots = curve.roots(points, line)
+        roots.forEach { (t) in
+            Swift.print(curve.compute(t))
+        }
+    }
+    
+    func testGomi() {
+        let pathA = NSBezierPath(rect: NSRect(x: 0, y: 0, width: 50, height: 50))
+        let pathB = NSBezierPath(rect: NSRect(x: 5, y: 5, width: 40, height: 40))
+        Swift.print(pathA.bounds.intersects(pathB.bounds))
+    }
 
     func testPerformanceExample() {
         // This is an example of a performance test case.

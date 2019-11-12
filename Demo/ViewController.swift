@@ -11,26 +11,20 @@ import Cocoa
 class ViewController: NSViewController {
 
     @IBOutlet weak var bezierView: BezierView!
-    @IBOutlet weak var toggleBtn: NSButton!
+    @IBOutlet weak var modePopUp: NSPopUpButton!
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        let attributes: [NSAttributedString.Key : Any] = [
-            NSAttributedString.Key.foregroundColor: NSColor.black,
-            NSAttributedString.Key.font: NSFont.systemFont(ofSize: 16)
-        ]
-        toggleBtn.attributedTitle = NSAttributedString(string: "Interactive", attributes: attributes)
     }
 
     override var representedObject: Any? {
         didSet {
-        // Update the view, if already loaded.
         }
     }
 
-    @IBAction func toggle(_ sender: NSButton) {
-        bezierView.toggle(sender.state == NSControl.StateValue.on)
+    @IBAction func select(_ sender: NSPopUpButton) {
+        bezierView.select(sender.indexOfSelectedItem)
     }
+
 }
 

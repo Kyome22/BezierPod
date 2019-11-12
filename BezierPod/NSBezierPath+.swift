@@ -180,6 +180,9 @@ public extension NSBezierPath {
         var groups = [[Bezier]]()
         for n in (0 ..< list.count) {
             let intersections: [CGPoint] = BezierPod.resolveIntersection(&list[n])
+            // groups.append(contentsOf: list[n].map({ (b) -> [Bezier] in
+            //     return [b]
+            // }))
             groups.append(contentsOf: BezierPod.removeExtraPath(list[n], originals, intersections, distance))
         }
         var offsetPaths = [NSBezierPath]()
@@ -204,24 +207,81 @@ public extension NSBezierPath {
         return offsetPaths
     }
     
+    // ★★★ Get Beziers of Original Path ★★★
+    private func convertBeziers() -> [Bezier] {
+        var beziers = [Bezier]()
+        var prePoint = CGPoint.zero
+        var lastMoved = CGPoint.zero
+        var points = [CGPoint](repeating: CGPoint.zero, count: 3)
+        for i in (0 ..< self.elementCount) {
+            switch self.element(at: i, associatedPoints: &points) {
+            case .moveTo:
+                prePoint = points[0]
+                lastMoved = points[0]
+            case .lineTo:
+                let line = Line(p1: prePoint, p2: points[0])
+                beziers.append(line)
+            case .curveTo:
+                let curve = Curve(points: [prePoint] + points)
+                beziers.append(curve)
+            case.closePath:
+                if beziers.isEmpty { break }
+                let line = Line(p1: prePoint, p2: lastMoved)
+                beziers.append(line)
+            @unknown default:
+                fatalError()
+            }
+        }
+        return beziers
+    }
+    
+//    func divideSelf() -> [NSBezierPath] {
+//        let beziers = self.convertBeziers()
+//
+//    }
+    
+//    func divide(with path: NSBezierPath) -> [NSBezierPath] {
+//
+//    }
+    
     // ★★★ Get Union Path ★★★
-    func or(_ path: NSBezierPath) {
-        
+    func or(_ path: NSBezierPath) -> [NSBezierPath] {
+        if !self.bounds.intersects(path.bounds) {
+            return [self, path]
+        }
+        let beziersA = self.convertBeziers()
+        let beziersB = path.convertBeziers()
+        return []
     }
     
     // ★★★ Get Intersection Path ★★★
-    func and(_ path: NSBezierPath) {
-        
+    func and(_ path: NSBezierPath) -> [NSBezierPath] {
+        if !self.bounds.intersects(path.bounds) {
+            return []
+        }
+        let beziersA = self.convertBeziers()
+        let beziersB = path.convertBeziers()
+        return []
     }
     
     // ★★★ Get Difference Path ★★★
-    func not(_ path: NSBezierPath) {
-        
+    func not(_ path: NSBezierPath) -> [NSBezierPath] {
+        if !self.bounds.intersects(path.bounds) {
+            return [self]
+        }
+        let beziersA = self.convertBeziers()
+        let beziersB = path.convertBeziers()
+        return []
     }
     
     // ★★★ Get Symmetric Difference Path ★★★
-    func xor(_ path: NSBezierPath) {
-        
+    func xor(_ path: NSBezierPath) -> [NSBezierPath] {
+        if !self.bounds.intersects(path.bounds) {
+            return [self, path]
+        }
+        let beziersA = self.convertBeziers()
+        let beziersB = path.convertBeziers()
+        return []
     }
     
 }

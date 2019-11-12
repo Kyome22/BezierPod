@@ -8,7 +8,7 @@
 
 import CoreGraphics
 
-fileprivate let epsilon: CGFloat = 0.5
+fileprivate let epsilon: CGFloat = 0.5 // important for error
 typealias DivideList = (list: [[Bezier]], loop: [Bezier], remainder: [Bezier])
 
 class BezierPod {
@@ -58,6 +58,13 @@ class BezierPod {
                 beziers.remove(at: n)
             }
         }
+        for n in (1 ..< beziers.count) {
+            if BezierPod.isError(beziers[n].p1, beziers[n - 1].p2) {
+                let average = (beziers[n].p1 + beziers[n - 1].p2) / 2.0
+                beziers[n].points[0] = average
+                beziers[n - 1].points[3] = average
+            }
+        }
     }
     
     static func squeezing(_ beziers: inout [Bezier], _ points: [CGPoint]) -> [CGPoint] {
@@ -74,12 +81,6 @@ class BezierPod {
             return (2 <= cnt) ? p : nil
         }
         return squeezed
-    }
-    
-    static func chaining(_ beziers: inout [Bezier]) {
-        for n in (1 ..< beziers.count) {
-            beziers[n].points[0] = beziers[n - 1].p2
-        }
     }
     
     static func dividing(_ beziers: [Bezier], _ intersections: [CGPoint]) -> [[Bezier]] {
@@ -210,28 +211,30 @@ class BezierPod {
     }
     
     static func resolveIntersection(_ beziers: inout [Bezier]) -> [CGPoint] {
-        BezierPod.cleaning(&beziers)
-        if beziers.count < 2 { return [] }
+        if beziers.isEmpty { return [] }
         var joints = [CGPoint]()
-        // collecting intersections of original curves
-        for i in (0 ..< beziers.count - 2) {
-            for j in ((i + 2) ..< beziers.count) {
+        for i in (0 ..< beziers.count - 1) {
+            // collecting joints between two curves
+            if BezierPod.isError(beziers[i].p2, beziers[i + 1].p1) {
+                let average = (beziers[i].p2 + beziers[i + 1].p1) / 2.0
+                BezierPod.append(average, to: &joints)
+            }
+            // collecting self intersections
+            if let intersects = beziers[i].selfIntersects() {
+                intersects.forEach { (intersect) in
+                    BezierPod.append(beziers[i].compute(intersect.tSelf), to: &joints)
+                }
+            }
+            // collecting other intersections
+            for j in ((i + 1) ..< beziers.count) {
                 if let intersects = beziers[i].intersects(with: beziers[j]) {
                     intersects.forEach { (intersect) in
-                        let intersection = beziers[i].compute(intersect.tSelf)
-                        BezierPod.append(intersection, to: &joints)
+                        BezierPod.append(beziers[i].compute(intersect.tSelf), to: &joints)
                     }
                 }
             }
         }
-        // collecting joints of original curves
         beziers.append(beziers.first!)
-        for n in (0 ..< beziers.count - 1) {
-            if BezierPod.isError(beziers[n].p2, beziers[n + 1].p1) {
-                let average = (beziers[n].p2 + beziers[n + 1].p1) / 2.0
-                BezierPod.append(average, to: &joints)
-            }
-        }
         // spliting original curves via joints
         var i: Int = 0
         while i < beziers.count {
@@ -240,7 +243,7 @@ class BezierPod {
                 if 2.0 * epsilon < d.value { continue }
                 if beziers[i].between(d.t, 0.0, 1.0) {
                     if let line = beziers[i] as? Line {
-                        let splitedLine: LinePair = line.split(d.t)
+                         let splitedLine: LinePair = line.split(d.t)
                         splitedLine.left.points[3] = joint
                         splitedLine.right.points[0] = joint
                         line.updateSelf(splitedLine.left)
@@ -258,7 +261,6 @@ class BezierPod {
         }
         beziers.removeLast()
         BezierPod.cleaning(&beziers)
-        BezierPod.chaining(&beziers)
         return BezierPod.squeezing(&beziers, joints)
     }
     

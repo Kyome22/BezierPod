@@ -9,6 +9,15 @@
 import Cocoa
 import BezierPod
 
+enum Mode: Int {
+    case offsetInterective
+    case offsetNoninterective
+    case or
+    case and
+    case not
+    case xor
+}
+
 class BezierView: NSView {
     
     var w: CGFloat { return self.bounds.width }
@@ -16,19 +25,30 @@ class BezierView: NSView {
     var r: CGFloat = 3.0
     var points = [NSPoint]()
     var currentPoint: Int = -1
-    var isInteractive: Bool = true
+    var mode = Mode.offsetInterective
     
-    let targets = [NSPoint(x: 163.2, y: 76.8),
-                   NSPoint(x: 368.77734375, y: 223.68359375),
-                   NSPoint(x: 171.16015625, y: 265.71875),
+    let targets = [NSPoint(x: 163.20000000000002, y: 76.8),
+                   NSPoint(x: 81.60000000000001, y: 273.59999999999997),
+                   NSPoint(x: 675.84375, y: 460.3828125),
                    NSPoint(x: 350.4, y: 369.6),
-                   NSPoint(x: 243.75, y: 38.09375)]
+                   NSPoint(x: 216.0, y: 436.8)]
+    
+    let targets3 = [NSPoint(x: 163.20000000000002, y: 76.8),
+                    NSPoint(x: 400.33984375, y: 72.55859375),
+                    NSPoint(x: 508.1796875, y: 126.53515625),
+                    NSPoint(x: 350.4, y: 369.6),
+                    NSPoint(x: 216.0, y: 436.8)]
+    
+    let targets2 = [NSPoint(x: 337.5401773395534, y:352.6308170901928),
+                    NSPoint(x: 336.56233542524456,y: 354.15815251237984)]
+
+
     
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         self.wantsLayer = true
         self.layer?.backgroundColor = CGColor.white
-        points = targets
+        points = targets3
 //        points.append(NSPoint(x: 0.34 * w, y: 0.16 * h))
 //        points.append(NSPoint(x: 0.17 * w, y: 0.57 * h))
 //        points.append(NSPoint(x: 0.8 * w, y: 0.39 * h))
@@ -53,17 +73,20 @@ class BezierView: NSView {
         self.layer?.setNeedsDisplay()
     }
     
-    func toggle(_ flag: Bool) {
-        isInteractive = flag
+    func select(_ id: Int) {
+        mode = Mode(rawValue: id)!
         self.layer?.setNeedsDisplay()
     }
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        if isInteractive{
-            drawInteractive()
-        } else {
-            drawNonInteractive()
+        switch mode {
+        case .offsetInterective: drawInteractive()
+        case .offsetNoninterective: drawNonInteractive()
+        case .or: drawOr()
+        case .and: drawAnd()
+        case .not: drawNot()
+        case .xor: drawXor()
         }
     }
     
@@ -82,11 +105,11 @@ class BezierView: NSView {
         drawLookUpTable(bezier)
         drawOffset(bezier, 30.0, NSColor.red)
         drawOffset(bezier, -18.0, NSColor.blue)
+
     }
     
     func drawInteractive() {
         let bezier = NSBezierPath()
-        NSColor.blue.setStroke()
         bezier.lineWidth = 3.0
         bezier.move(to: points[0])
         bezier.curve(to: points[3],
@@ -95,12 +118,15 @@ class BezierView: NSView {
         bezier.line(to: points[4])
         drawControlLine()
         drawLookUpTable(bezier)
-
+        
         // Test you want to
-        drawOffset(bezier, 20.0, NSColor.red)
-        drawOffset(bezier, -20.0, NSColor.blue)
+//        drawOffset(bezier, 20.0, NSColor.red)
+        drawOffset(bezier, -20.0)
         
         drawControlPoint()
+//        targets2.forEach { (p) in
+//               drawLing(p, NSColor.black)
+//           }
     }
     
     func drawControlLine() {
@@ -117,6 +143,7 @@ class BezierView: NSView {
     }
     
     func drawControlPoint() {
+        Swift.print(points)
         let path = NSBezierPath()
         NSColor.gray.setStroke()
         for i in (0 ..< 5) {
@@ -146,6 +173,11 @@ class BezierView: NSView {
             dot.fill()
         }
     }
+    
+    func draw05() {
+        let curve = Curve(points: [points[0], points[1], points[2], points[3]])
+        drawLing(curve.compute(0.5), NSColor.orange)
+    }
         
     func drawOffset(_ path: NSBezierPath, _ distance: CGFloat, _ color: NSColor) {
         let offsetPath = path.offset(distance)
@@ -159,10 +191,47 @@ class BezierView: NSView {
     func drawOffset(_ path: NSBezierPath, _ distance: CGFloat) {
         let offsetPath = path.offset(distance)
         for (n, bezier) in offsetPath.enumerated() {
-            NSColor(hue: CGFloat(n) / CGFloat(offsetPath.count)).set()
+            if n % 2 == 0 {
+                NSColor.red.setStroke()
+            } else {
+                NSColor.blue.setStroke()
+            }
+//            NSColor(hue: CGFloat(n) / CGFloat(offsetPath.count)).set()
             bezier.lineWidth = 0.5
             bezier.stroke()
         }
     }
     
+    func makeAB() -> (bezierA: NSBezierPath, bezierB: NSBezierPath) {
+        let bezierA = NSBezierPath(roundedRect: NSRect(x: 50, y: 100, width: 300, height: 200),
+                                   xRadius: 50,
+                                   yRadius: 80)
+        let bezierB = NSBezierPath()
+        bezierB.move(to: NSPoint(x: 150, y: 150))
+        bezierB.line(to: NSPoint(x: 400, y: 150))
+        bezierB.line(to: NSPoint(x: 400, y: 350))
+        bezierB.line(to: NSPoint(x: 200, y: 350))
+        bezierB.line(to: NSPoint(x: 230, y: 250))
+        bezierB.line(to: NSPoint(x: 330, y: 250))
+        bezierB.line(to: NSPoint(x: 330, y: 200))
+        bezierB.line(to: NSPoint(x: 100, y: 200))
+        bezierB.close()
+        return (bezierA, bezierB)
+    }
+    
+    func drawOr() {
+
+    }
+    
+    func drawAnd() {
+        
+    }
+    
+    func drawNot() {
+        
+    }
+    
+    func drawXor() {
+        
+    }
 }

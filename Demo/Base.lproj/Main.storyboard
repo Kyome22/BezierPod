@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="15400" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="15505" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15400"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15505"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -710,24 +710,45 @@
                         <rect key="frame" x="0.0" y="0.0" width="480" height="480"/>
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
-                            <customView translatesAutoresizingMaskIntoConstraints="NO" id="XN9-Zg-5QG" customClass="BezierView" customModule="Demo" customModuleProvider="target">
+                            <customView appearanceType="aqua" translatesAutoresizingMaskIntoConstraints="NO" id="XN9-Zg-5QG" customClass="BezierView" customModule="Demo" customModuleProvider="target">
                                 <rect key="frame" x="0.0" y="0.0" width="480" height="480"/>
                                 <subviews>
-                                    <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Msd-yS-sji">
-                                        <rect key="frame" x="18" y="18" width="86" height="18"/>
-                                        <buttonCell key="cell" type="check" title="Interactive" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="4MK-vh-C0O">
-                                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="skg-Pr-Rt6">
+                                        <rect key="frame" x="18" y="17" width="168" height="25"/>
+                                        <popUpButtonCell key="cell" type="push" title="Offset Interective" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="EQO-z0-Y0w" id="VKW-1q-CrG">
+                                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                             <font key="font" metaFont="system"/>
-                                        </buttonCell>
-                                        <color key="contentTintColor" red="0.0494130710659898" green="0.0494130710659898" blue="0.0494130710659898" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <menu key="menu" id="h20-m0-64i">
+                                                <items>
+                                                    <menuItem title="Offset Interective" state="on" id="EQO-z0-Y0w">
+                                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                                    </menuItem>
+                                                    <menuItem title="Offset Noninterective" id="C83-oh-Nw0">
+                                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                                    </menuItem>
+                                                    <menuItem title="OR" id="Xrb-Sv-hFn">
+                                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                                    </menuItem>
+                                                    <menuItem title="AND" id="bpS-OP-mAc">
+                                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                                    </menuItem>
+                                                    <menuItem title="NOT" id="WaN-Sm-ylV">
+                                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                                    </menuItem>
+                                                    <menuItem title="XOR" id="Fvu-B6-SOk">
+                                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                                    </menuItem>
+                                                </items>
+                                            </menu>
+                                        </popUpButtonCell>
                                         <connections>
-                                            <action selector="toggle:" target="XfG-lQ-9wD" id="Ji8-Kq-m1e"/>
+                                            <action selector="select:" target="XfG-lQ-9wD" id="nEz-XJ-bwf"/>
                                         </connections>
-                                    </button>
+                                    </popUpButton>
                                 </subviews>
                                 <constraints>
-                                    <constraint firstItem="Msd-yS-sji" firstAttribute="leading" secondItem="XN9-Zg-5QG" secondAttribute="leading" constant="20" id="Mmw-AU-Ico"/>
-                                    <constraint firstAttribute="bottom" secondItem="Msd-yS-sji" secondAttribute="bottom" constant="20" id="PzY-21-0n1"/>
+                                    <constraint firstItem="skg-Pr-Rt6" firstAttribute="leading" secondItem="XN9-Zg-5QG" secondAttribute="leading" constant="20" id="OCF-kY-UbY"/>
+                                    <constraint firstAttribute="bottom" secondItem="skg-Pr-Rt6" secondAttribute="bottom" constant="20" id="Rao-jL-JA1"/>
                                 </constraints>
                             </customView>
                         </subviews>
@@ -740,7 +761,7 @@
                     </view>
                     <connections>
                         <outlet property="bezierView" destination="XN9-Zg-5QG" id="wD6-YA-wbb"/>
-                        <outlet property="toggleBtn" destination="Msd-yS-sji" id="xzI-cV-lsi"/>
+                        <outlet property="modePopUp" destination="skg-Pr-Rt6" id="C9h-nc-R03"/>
                     </connections>
                 </viewController>
                 <customObject id="rPt-NT-nkU" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>

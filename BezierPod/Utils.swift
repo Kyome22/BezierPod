@@ -121,3 +121,22 @@ public extension CGSize {
         self.init(width: const, height: const)
     }
 }
+
+public extension CGRect {
+    var center: CGPoint {
+        return CGPoint(x: self.midX, y: self.midY)
+    }
+    
+    func strictIntersects(_ rect2: CGRect) -> Bool {
+        if self.intersects(rect2) {
+            return true
+        }
+        if self.contains(CGPoint(x: rect2.minX, y: rect2.minY))
+            || self.contains(CGPoint(x: rect2.minX, y: rect2.maxY))
+            || self.contains(CGPoint(x: rect2.maxX, y: rect2.minY))
+            || self.contains(CGPoint(x: rect2.maxX, y: rect2.maxY)) {
+            return true
+        }
+        return false
+    }
+}

@@ -27,7 +27,7 @@ public class Line: Bezier {
         super.init(points: [p, p, newP2, newP2])
     }
     
-    public func updateSelf(_ line: Line) {
+    func updateSelf(_ line: Line) {
         self.points = line.points
     }
     
@@ -69,6 +69,15 @@ public class Line: Bezier {
     
     var lineLength: CGFloat {
         return p1.length(from: p2)
+    }
+    
+    func roots(_ curve: Curve) -> [Intersect] {
+        return roots(curve.points, self).compactMap { (tOther) -> Intersect? in
+            guard let tSelf = backCompute(curve.compute(tOther)) else {
+                return nil
+            }
+            return Intersect(tSelf: tSelf, tOther: tOther)
+        }
     }
     
     func offset(_ d: CGFloat) -> Line {
@@ -129,13 +138,7 @@ public class Line: Bezier {
     // curve intersects
     func intersects(_ curve: Curve) -> [Intersect]? {
         if !curve.overlaps(self) { return nil }        
-        let result: [Intersect] = roots(curve.points, self).compactMap { (v) -> Intersect? in
-            if !between(v, 0.0, 1.0) { return nil }
-            let p: CGPoint = curve.compute(v)
-            guard let t: CGFloat = backCompute(p) else { return nil }
-            if !between(t, 0.0, 1.0) { return nil }
-            return Intersect(tSelf: t, tOther: v)
-        }
+        let result: [Intersect] = roots(curve)
         if result.isEmpty { return nil }
         return result
     }
