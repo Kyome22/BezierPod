@@ -18,15 +18,22 @@ class BezierView: NSView {
     var currentPoint: Int = -1
     var isInteractive: Bool = true
     
+    let targets = [NSPoint(x: 163.2, y: 76.8),
+                   NSPoint(x: 368.77734375, y: 223.68359375),
+                   NSPoint(x: 171.16015625, y: 265.71875),
+                   NSPoint(x: 350.4, y: 369.6),
+                   NSPoint(x: 243.75, y: 38.09375)]
+    
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         self.wantsLayer = true
         self.layer?.backgroundColor = CGColor.white
-        points.append(NSPoint(x: 0.34 * w, y: 0.16 * h))
-        points.append(NSPoint(x: 0.17 * w, y: 0.57 * h))
-        points.append(NSPoint(x: 0.8 * w, y: 0.39 * h))
-        points.append(NSPoint(x: 0.73 * w, y: 0.77 * h))
-        points.append(NSPoint(x: 0.45 * w, y: 0.91 * h))
+        points = targets
+//        points.append(NSPoint(x: 0.34 * w, y: 0.16 * h))
+//        points.append(NSPoint(x: 0.17 * w, y: 0.57 * h))
+//        points.append(NSPoint(x: 0.8 * w, y: 0.39 * h))
+//        points.append(NSPoint(x: 0.73 * w, y: 0.77 * h))
+//        points.append(NSPoint(x: 0.45 * w, y: 0.91 * h))
     }
     
     override func mouseDown(with event: NSEvent) {

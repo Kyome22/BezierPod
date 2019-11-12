@@ -217,8 +217,10 @@ class BezierPod {
         for i in (0 ..< beziers.count - 2) {
             for j in ((i + 2) ..< beziers.count) {
                 if let intersects = beziers[i].intersects(with: beziers[j]) {
-                    let intersection: CGPoint = beziers[i].compute(intersects[0].tSelf)
-                    BezierPod.append(intersection, to: &joints)
+                    intersects.forEach { (intersect) in
+                        let intersection = beziers[i].compute(intersect.tSelf)
+                        BezierPod.append(intersection, to: &joints)
+                    }
                 }
             }
         }
