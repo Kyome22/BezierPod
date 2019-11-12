@@ -304,12 +304,7 @@ public class Curve: Bezier {
             return pair.left.bounds.intersects(pair.right.bounds)
         })
         var results = [Intersect]()
-        if pairs.isEmpty {
-            if c1b.center.length(from: c2b.center) < threshold {
-                Swift.print(c1b.width, c1b.height, c2b.width, c2b.height)
-            }
-            return results
-        }
+        if pairs.isEmpty { return results }
         pairs.forEach { (pair) in
             results.append(contentsOf: pairIteration(pair.left, pair.right, threshold))
         }

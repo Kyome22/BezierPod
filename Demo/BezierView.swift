@@ -220,7 +220,18 @@ class BezierView: NSView {
     }
     
     func drawOr() {
-
+        let path = makeAB()
+        path.bezierA.append(path.bezierB)
+        let dividePath = path.bezierA.divideSelf()
+        for (n, bezier) in dividePath.enumerated() {
+            if n % 2 == 0 {
+                NSColor.red.setStroke()
+            } else {
+                NSColor.blue.setStroke()
+            }
+            bezier.lineWidth = 0.5
+            bezier.stroke()
+        }
     }
     
     func drawAnd() {

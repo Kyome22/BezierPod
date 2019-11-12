@@ -131,6 +131,58 @@ public extension NSBezierPath {
         return lut
     }
     
+    // ★★★ Get Beziers of Original Path ★★★
+    private func convertBeziers() -> [Bezier] {
+        var beziers = [Bezier]()
+        var prePoint = CGPoint.zero
+        var lastMoved = CGPoint.zero
+        var points = [CGPoint](repeating: CGPoint.zero, count: 3)
+        for i in (0 ..< self.elementCount) {
+            switch self.element(at: i, associatedPoints: &points) {
+            case .moveTo:
+                prePoint = points[0]
+                lastMoved = points[0]
+            case .lineTo:
+                let line = Line(p1: prePoint, p2: points[0])
+                beziers.append(line)
+            case .curveTo:
+                let curve = Curve(points: [prePoint] + points)
+                beziers.append(curve)
+            case.closePath:
+                if beziers.isEmpty { break }
+                let line = Line(p1: prePoint, p2: lastMoved)
+                beziers.append(line)
+            @unknown default:
+                fatalError()
+            }
+        }
+        return beziers
+    }
+    
+    // ★★★ Get NSBezierPath from Beziers ★★★
+    private func convertNSBezierPath(_ groups: [[Bezier]]) -> [NSBezierPath] {
+        var paths = [NSBezierPath]()
+        for group in groups {
+            if group.isEmpty { continue }
+            paths.append(NSBezierPath())
+            paths.last!.copyAttribute(from: self)
+            paths.last!.move(to: group.first!.p1)
+            group.forEach { (bezier) in
+                if let curve = bezier as? Curve {
+                    paths.last!.curve(to: curve.p2,
+                                            controlPoint1: curve.c1,
+                                            controlPoint2: curve.c2)
+                } else if let line = bezier as? Line {
+                    paths.last!.line(to: line.p2)
+                }
+            }
+            if BezierPod.isError(group.last!.p2, group.first!.p1) {
+                paths.last!.close()
+            }
+        }
+        return paths
+    }
+    
     // ★★★ Get Offset Path ★★★
     // not support compound path completely...
     func offset(_ distance: CGFloat, _ corner: Corner = .miter) -> [NSBezierPath] {
@@ -177,68 +229,26 @@ public extension NSBezierPath {
                 fatalError()
             }
         }
-        var groups = [[Bezier]]()
-        for n in (0 ..< list.count) {
-            let intersections: [CGPoint] = BezierPod.resolveIntersection(&list[n])
-            // groups.append(contentsOf: list[n].map({ (b) -> [Bezier] in
-            //     return [b]
-            // }))
-            groups.append(contentsOf: BezierPod.removeExtraPath(list[n], originals, intersections, distance))
+        var beziers = list.flatMap { (beziers) -> [Bezier] in
+            return beziers
         }
-        var offsetPaths = [NSBezierPath]()
-        for group in groups {
-            if group.isEmpty { continue }
-            offsetPaths.append(NSBezierPath())
-            offsetPaths.last!.copyAttribute(from: self)
-            offsetPaths.last!.move(to: group.first!.p1)
-            group.forEach { (bezier) in
-                if let curve = bezier as? Curve {
-                    offsetPaths.last!.curve(to: curve.p2,
-                                            controlPoint1: curve.c1,
-                                            controlPoint2: curve.c2)
-                } else if let line = bezier as? Line {
-                    offsetPaths.last!.line(to: line.p2)
-                }
-            }
-            if BezierPod.isError(group.last!.p2, group.first!.p1) {
-                offsetPaths.last!.close()
-            }
-        }
-        return offsetPaths
+        let intersections: [CGPoint] = BezierPod.resolveIntersection(&beziers)
+        let groups: [[Bezier]] = BezierPod.removeExtraPath(beziers, originals, intersections, distance)
+        return convertNSBezierPath(groups)
     }
     
-    // ★★★ Get Beziers of Original Path ★★★
-    private func convertBeziers() -> [Bezier] {
-        var beziers = [Bezier]()
-        var prePoint = CGPoint.zero
-        var lastMoved = CGPoint.zero
-        var points = [CGPoint](repeating: CGPoint.zero, count: 3)
-        for i in (0 ..< self.elementCount) {
-            switch self.element(at: i, associatedPoints: &points) {
-            case .moveTo:
-                prePoint = points[0]
-                lastMoved = points[0]
-            case .lineTo:
-                let line = Line(p1: prePoint, p2: points[0])
-                beziers.append(line)
-            case .curveTo:
-                let curve = Curve(points: [prePoint] + points)
-                beziers.append(curve)
-            case.closePath:
-                if beziers.isEmpty { break }
-                let line = Line(p1: prePoint, p2: lastMoved)
-                beziers.append(line)
-            @unknown default:
-                fatalError()
-            }
+    func divideSelf() -> [NSBezierPath] {
+        var list = [[Bezier]]()
+        disassembled.forEach { (path) in
+            let b = path.convertBeziers()
+            list.append(contentsOf: [b])
         }
-        return beziers
+        return convertNSBezierPath(list)
+//        let _ = BezierPod.resolveIntersection(&beziers)
+//        return convertNSBezierPath([beziers])
+//        let groups: [[Bezier]] = BezierPod.grouping(beziers)
+//        return convertNSBezierPath(groups)
     }
-    
-//    func divideSelf() -> [NSBezierPath] {
-//        let beziers = self.convertBeziers()
-//
-//    }
     
 //    func divide(with path: NSBezierPath) -> [NSBezierPath] {
 //
