@@ -1,3 +1,11 @@
+# Mac
 .DS_Store
-bezier.js
-reduce.js
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+
+# Swift Package Manager
+Packages.resolved
+.swiftpm/
+.build/
